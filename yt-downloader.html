@@ -561,10 +561,15 @@
 
     // List of public Cobalt API instances for automatic failover
     const cobaltInstances = [
-      'https://api.cobalt.tools/api/json',
-      'https://cobalt.api.ryb.me/api/json',
-      'https://co.wuk.sh/api/json'
+      'https://cobalt.aeong.one/',
+      'https://cobalt.datura.network/',
+      'https://co.wuk.sh/',
+      'https://api.cobalt.tools/',
+      'https://cobalt.api.ryb.me/',
+      'https://cobalt.7n.world/',
     ];
+    // Some instances need /api/json path
+    const cobaltPaths = ['', '/api/json'];
     let currentInstanceIndex = 0;
 
     // Elements
@@ -714,39 +719,39 @@
         url: currentVideoUrl,
         videoQuality: selectedQualityValue,
         audioFormat: selectedAudioFormatValue,
-        downloadMode: selectedMode, // "video" or "audio"
+        downloadMode: selectedMode,
         filenamePattern: "pretty"
       };
 
-      try {
-        const response = await fetch(currentInstance, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
+      // Try each path variant for this instance
+      for (const path of cobaltPaths) {
+        const apiUrl = currentInstance.replace(/\/$/, '') + path;
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (response.ok && data.url) {
-          // Success! Trigger browser download
-          triggerDownload(data.url);
-          setDownloadState(false);
-          return true;
-        } else {
-          console.warn(`Node ${currentInstanceIndex} failed:`, data.text || 'Unknown API issue');
-          // Try next instance
-          currentInstanceIndex++;
-          return await attemptDownload();
+          if (response.ok && data.url) {
+            triggerDownload(data.url);
+            setDownloadState(false);
+            return true;
+          }
+          console.warn(`Node ${currentInstanceIndex} path ${path}:`, data.text || 'No URL in response');
+        } catch (error) {
+          console.warn(`Network error on node ${currentInstanceIndex} path ${path}:`, error);
         }
-      } catch (error) {
-        console.warn(`Network error on node ${currentInstanceIndex}:`, error);
-        // Try next instance
-        currentInstanceIndex++;
-        return await attemptDownload();
       }
+
+      // All paths failed, try next instance
+      currentInstanceIndex++;
+      return await attemptDownload();
     }
 
     function setDownloadState(isLoading) {
