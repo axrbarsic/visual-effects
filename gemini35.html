@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Visualizer Engine</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0a0a0f;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            display: block;
+        }
+        .ui-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            max-width: 95vw;
+            overflow-x: auto;
+            padding: 10px 16px;
+            background: rgba(10, 10, 15, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            scrollbar-width: none;
+        }
+        .ui-panel::-webkit-scrollbar {
+            display: none;
+        }
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 12px 22px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            white-space: nowrap;
+            outline: none;
+        }
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.05);
+        }
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+        .info-panel {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(10, 10, 15, 0.5);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 12px 28px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 14px;
+            letter-spacing: 0.8px;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: all 0.5s ease;
+        }
+        .info-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 3px;
+        }
+        .info-desc {
+            font-weight: 400;
+            color: #ffffff;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel" id="infoPanel">
+        <div class="info-title" id="infoTitle">Mode</div>
+        <div class="info-desc" id="infoDesc">Loading Effect Engine...</div>
+    </div>
+    <div class="ui-panel" id="uiPanel"></div>
+    <canvas id="stage"></canvas>
+
+    <script>
+        const canvas = document.getElementById('stage');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const infoTitle = document.getElementById('infoTitle');
+        const infoDesc = document.getElementById('infoDesc');
+        const uiPanel = document.getElementById('uiPanel');
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let dpr = window.devicePixelRatio || 1;
+
+        const mouse = {
+            x: width / 2,
+            y: height / 2,
+            targetX: width / 2,
+            targetY: height / 2,
+            down: false,
+            active: false
+        };
+
+        const config = {
+            particleCount: 180,
+            matrixColumns: 0,
+            hexRadius: 32,
+            vortexParticles: 600,
+            ringCount: 35
+        };
+
+        const activeMode = {
+            current: 0,
+            target: null,
+            transitioning: false
+        };
+
+        function initCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(dpr, dpr);
+        }
+        initCanvas();
+
+        window.addEventListener('resize', () => {
+            initCanvas();
+            modes.forEach(mode => {
+                if (mode.resize) mode.resize();
+            });
+        });
+
+        const updateMouse = (e) => {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            mouse.targetX = clientX;
+            mouse.targetY = clientY;
+            mouse.active = true;
+        };
+
+        window.addEventListener('mousemove', updateMouse);
+        window.addEventListener('touchmove', updateMouse, { passive: true });
+        window.addEventListener('mouseleave', () => { mouse.active = false; });
+        window.addEventListener('touchend', () => { mouse.active = false; });
+        window.addEventListener('mousedown', (e) => {
+            mouse.down = true;
+            if (modes[activeMode.current].click) {
+                modes[activeMode.current].click(e.clientX, e.clientY);
+            }
+        });
+        window.addEventListener('mouseup', () => { mouse.down = false; });
+        window.addEventListener('touchstart', (e) => {
+            mouse.down = true;
+            updateMouse(e);
+            if (modes[activeMode.current].click) {
+                modes[activeMode.current].click(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+
+        const modes = [
+            {
+                name: "Cosmic Particles",
+                desc: "Gravitational nodes with dynamic link vectors and burst spawns",
+                particles: [],
+                bursts: [],
+                colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'],
+                init() {
+                    this.particles = [];
+                    for (let i = 0; i < config.particleCount; i++) {
+                        this.particles.push(this.createParticle(false));
+                    }
+                },
+                createParticle(isBurst, x, y) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = isBurst ? Math.random() * 5 + 2 : Math.random() * 1.2 + 0.3;
+                    return {
+                        x: x !== undefined ? x : Math.random() * width,
+                        y: y !== undefined ? y : Math.random() * height,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        radius: isBurst ? Math.random() * 3 + 1 : Math.random() * 4 + 1.5,
+                        color: this.colors[Math.floor(Math.random() * this.colors.length)],
+                        life: isBurst ? 1.0 : 0,
+                        decay: Math.random() * 0.02 + 0.01
+                    };
+                },
+                click(x, y) {
+                    for (let i = 0; i < 25; i++) {
+                        this.bursts.push(this.createParticle(true, x, y));
+                    }
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    const length = this.particles.length;
+                    for (let i = 0; i < length; i++) {
+                        const p = this.particles[i];
+                        
+                        if (mouse.active) {
+                            const dx = mouse.x - p.x;
+                            const dy = mouse.y - p.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 180) {
+                                const force = (180 - dist) / 180;
+                                p.vx += (dx / dist) * force * 0.15;
+                                p.vy += (dy / dist) * force * 0.15;
+                            }
+                        }
+
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vx *= 0.98;
+                        p.vy *= 0.98;
+
+                        if (p.x < 0) { p.x = width; p.vx += 0.2; }
+                        else if (p.x > width) { p.x = 0; p.vx -= 0.2; }
+                        if (p.y < 0) { p.y = height; p.vy += 0.2; }
+                        else if (p.y > height) { p.y = 0; p.vy -= 0.2; }
+
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.fill();
+
+                        for (let j = i + 1; j < length; j++) {
+                            const p2 = this.particles[j];
+                            const dx = p.x - p2.x;
+                            const dy = p.y - p2.y;
+                            const distSq = dx * dx + dy * dy;
+                            if (distSq < 110 * 110) {
+                                const dist = Math.sqrt(distSq);
+                                ctx.beginPath();
+                                ctx.moveTo(p.x, p.y);
+                                ctx.lineTo(p2.x, p2.y);
+                                ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist / 110) * 0.18})`;
+                                ctx.lineWidth = 0.8;
+                                ctx.stroke();
+                            }
+                        }
+                    }
+
+                    for (let i = this.bursts.length - 1; i >= 0; i--) {
+                        const p = this.bursts[i];
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.life -= p.decay;
+                        if (p.life <= 0) {
+                            this.bursts.splice(i, 1);
+                            continue;
+                        }
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life;
+                        ctx.fill();
+                        ctx.globalAlpha = 1.0;
+                    }
+                }
+            },
+            {
+                name: "3D Matrix Rain",
+                desc: "Multi-layered orthographic stream rendering with interactive spatial push",
+                chars: "ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                streams: [],
+                resize() {
+                    const columns = Math.floor(width / 16);
+                    this.streams = [];
+                    for (let i = 0; i < columns; i++) {
+                        const depth = Math.random() * 0.8 + 0.2;
+                        this.streams.push({
+                            x: i * 16,
+                            y: Math.random() * -height - 100,
+                            speed: (Math.random() * 5 + 3) * depth,
+                            fontSize: Math.floor(14 * depth + 6),
+                            depth: depth,
+                            chars: [],
+                            charLength: Math.floor(Math.random() * 20 + 10)
+                        });
+                    }
+                },
+                init() {
+                    this.resize();
+                },
+                click(x, y) {
+                    this.streams.forEach(s => {
+                        const dx = s.x - x;
+                        if (Math.abs(dx) < 150) {
+                            s.y -= Math.random() * 300 + 200;
+                        }
+                    });
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    ctx.font = 'bold 15px monospace';
+                    const len = this.streams.length;
+
+                    for (let i = 0; i < len; i++) {
+                        const s = this.streams[i];
+                        ctx.font = `bold ${s.fontSize}px monospace`;
+
+                        if (mouse.active) {
+                            const dx = mouse.x - s.x;
+                            const dy = mouse.y - s.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 150) {
+                                s.y -= s.speed * 0.45;
+                            }
+                        }
+
+                        s.y += s.speed;
+
+                        if (s.y > height + 200) {
+                            s.y = Math.random() * -200 - 50;
+                            s.speed = (Math.random() * 5 + 3) * s.depth;
+                        }
+
+                        if (Math.random() < 0.05 || s.chars.length === 0) {
+                            s.chars.push(this.chars[Math.floor(Math.random() * this.chars.length)]);
+                            if (s.chars.length > s.charLength) s.chars.shift();
+                        }
+
+                        const streamLen = s.chars.length;
+                        for (let j = 0; j < streamLen; j++) {
+                            const charY = s.y - j * (s.fontSize + 2);
+                            if (charY < 0 || charY > height) continue;
+
+                            const alpha = (j / streamLen) * s.depth;
+                            if (j === streamLen - 1) {
+                                ctx.fillStyle = `rgba(220, 255, 230, ${alpha * 1.2})`;
+                            } else {
+                                ctx.fillStyle = `rgba(34, 197, 94, ${alpha})`;
+                            }
+                            ctx.fillText(s.chars[j], s.x, charY);
+                        }
+                    }
+                }
+            },
+            {
+                name: "Galactic Vortex",
+                desc: "Orbital gravity structures with trailing celestial particles",
+                particles: [],
+                init() {
+                    this.particles = [];
+                    for (let i = 0; i < config.vortexParticles; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = Math.random() * Math.max(width, height) * 0.45 + 20;
+                        this.particles.push({
+                            angle: angle,
+                            dist: dist,
+                            baseDist: dist,
+                            speed: (0.005 + Math.random() * 0.008) * (1 - dist / (Math.max(width, height) * 0.55)),
+                            size: Math.random() * 1.8 + 0.6,
+                            hue: Math.floor(Math.random() * 60) + 260,
+                            val: Math.random() * 0.5 + 0.5
+                        });
+                    }
+                },
+                click(x, y) {
+                    this.particles.forEach(p => {
+                        p.dist += Math.random() * 200 - 100;
+                    });
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    const len = this.particles.length;
+
+                    for (let i = 0; i < len; i++) {
+                        const p = this.particles[i];
+                        p.angle += p.speed;
+
+                        if (mouse.active) {
+                            const dx = mouse.x - (centerX + Math.cos(p.angle) * p.dist);
+                            const dy = mouse.y - (centerY + Math.sin(p.angle) * p.dist);
+                            const mDist = Math.sqrt(dx * dx + dy * dy);
+                            if (mDist < 250) {
+                                const pull = (250 - mDist) * 0.25;
+                                p.dist += (p.dist > mDist ? -pull : pull) * 0.15;
+                            } else {
+                                p.dist += (p.baseDist - p.dist) * 0.02;
+                            }
+                        } else {
+                            p.dist += (p.baseDist - p.dist) * 0.02;
+                        }
+
+                        const px = centerX + Math.cos(p.angle) * p.dist;
+                        const py = centerY + Math.sin(p.angle) * p.dist;
+
+                        ctx.beginPath();
+                        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                        ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${p.val})`;
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: "Hexagonal Pulse",
+                desc: "Reactive tessellated mesh with radial distance deformation",
+                hexagons: [],
+                resize() {
+                    this.hexagons = [];
+                    const size = config.hexRadius;
+                    const h = size * Math.sqrt(3);
+                    const cols = Math.floor(width / (size * 1.5)) + 2;
+                    const rows = Math.floor(height / h) + 2;
+
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const cx = c * size * 1.5;
+                            const cy = r * h + ((c % 2) * h / 2);
+                            this.hexagons.push({ cx, cy, baseRadius: size - 3 });
+                        }
+                    }
+                },
+                init() {
+                    this.resize();
+                },
+                click(x, y) {
+                    this.hexagons.forEach(hex => {
+                        const dx = hex.cx - x;
+                        const dy = hex.cy - y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 300) {
+                            hex.pulseTimer = 1.0;
+                        }
+                    });
+                },
+                drawHex(cx, cy, radius) {
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (Math.PI / 3) * i;
+                        ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+                    }
+                    ctx.closePath();
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.4)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    const len = this.hexagons.length;
+                    for (let i = 0; i < len; i++) {
+                        const hex = this.hexagons[i];
+                        let dist = Infinity;
+                        
+                        if (mouse.active) {
+                            const dx = mouse.x - hex.cx;
+                            const dy = mouse.y - hex.cy;
+                            dist = Math.sqrt(dx * dx + dy * dy);
+                        }
+
+                        let factor = 0;
+                        if (dist < 220) {
+                            factor = (220 - dist) / 220;
+                        }
+
+                        if (hex.pulseTimer > 0) {
+                            factor = Math.max(factor, hex.pulseTimer);
+                            hex.pulseTimer -= 0.04;
+                        }
+
+                        const r = hex.baseRadius + (factor * 6);
+                        this.drawHex(hex.cx, hex.cy, r);
+
+                        ctx.lineWidth = factor > 0.1 ? 1.5 + factor * 2.0 : 0.8;
+                        const hue = 190 + factor * 130;
+                        ctx.strokeStyle = `hsla(${hue}, 90%, ${35 + factor * 45}%, ${0.12 + factor * 0.78})`;
+                        ctx.stroke();
+
+                        if (factor > 0.4) {
+                            ctx.fillStyle = `hsla(${hue}, 90%, 55%, ${factor * 0.15})`;
+                            ctx.fill();
+                        }
+                    }
+                }
+            },
+            {
+                name: "Neon Waves",
+                desc: "Multi-octave sine structures governed by dynamic pointer coords",
+                waves: [
+                    { yFactor: 0.5, speed: 0.015, amp: 45, freq: 0.004, color: '#ec4899', phase: 0 },
+                    { yFactor: 0.52, speed: 0.012, amp: 55, freq: 0.003, color: '#8b5cf6', phase: 2 },
+                    { yFactor: 0.48, speed: 0.02, amp: 35, freq: 0.005, color: '#06b6d4', phase: 4 }
+                ],
+                init() {},
+                click(x, y) {
+                    this.waves.forEach(w => {
+                        w.amp += Math.random() * 40 - 20;
+                    });
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    const mYFactor = mouse.active ? (mouse.y / height) * 2.0 : 1.0;
+                    const mXFactor = mouse.active ? (mouse.x / width) * 2.0 : 1.0;
+
+                    this.waves.forEach((w) => {
+                        w.phase += w.speed;
+                        ctx.beginPath();
+                        ctx.lineWidth = 3.5;
+                        ctx.strokeStyle = w.color;
+
+                        const cy = height * w.yFactor;
+                        const amplitude = w.amp * mYFactor;
+                        const frequency = w.freq * mXFactor;
+
+                        for (let x = 0; x < width; x += 3) {
+                            const y = cy + Math.sin(x * frequency + w.phase) * amplitude + 
+                                      Math.sin(x * 0.01 + w.phase * 1.5) * (amplitude * 0.25);
+                            if (x === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+                    });
+                }
+            },
+            {
+                name: "Impulse Rings",
+                desc: "Transient wavefront propagation with exponential chromatic decay",
+                rings: [],
+                init() {
+                    this.rings = [];
+                },
+                click(x, y) {
+                    this.spawnRing(x, y);
+                },
+                spawnRing(x, y) {
+                    const colors = ['#f43f5e', '#3b82f6', '#10b981', '#ec4899', '#8b5cf6', '#f59e0b'];
+                    this.rings.push({
+                        x: x,
+                        y: y,
+                        radius: 5,
+                        maxRadius: Math.random() * 220 + 130,
+                        speed: Math.random() * 3.5 + 4,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        opacity: 1.0
+                    });
+                },
+                draw() {
+                    ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    if (Math.random() < 0.08) {
+                        this.spawnRing(Math.random() * width, Math.random() * height);
+                    }
+
+                    for (let i = this.rings.length - 1; i >= 0; i--) {
+                        const r = this.rings[i];
+                        r.radius += r.speed;
+                        r.opacity = 1.0 - (r.radius / r.maxRadius);
+
+                        if (r.radius >= r.maxRadius) {
+                            this.rings.splice(i, 1);
+                            continue;
+                        }
+
+                        ctx.beginPath();
+                        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                        ctx.lineWidth = 3.0 * r.opacity + 0.5;
+                        ctx.strokeStyle = r.color;
+                        ctx.globalAlpha = r.opacity;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.arc(r.x, r.y, r.radius - 4, 0, Math.PI * 2);
+                        ctx.lineWidth = 1.0 * r.opacity;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
+                        
+                        ctx.globalAlpha = 1.0;
+                    }
+                }
+            }
+        ];
+
+        function switchMode(index) {
+            if (activeMode.transitioning || index === activeMode.current) return;
+            activeMode.transitioning = true;
+            activeMode.target = index;
+
+            document.querySelectorAll('.mode-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === index);
+            });
+
+            infoPanel.style.opacity = '0';
+            infoPanel.style.transform = 'translateX(-50%) translateY(-10px)';
+
+            setTimeout(() => {
+                activeMode.current = index;
+                modes[index].init();
+                infoTitle.textContent = `Visualizer Mode ${index + 1}`;
+                infoDesc.textContent = modes[index].desc;
+                infoPanel.style.opacity = '1';
+                infoPanel.style.transform = 'translateX(-50%) translateY(0)';
+                activeMode.transitioning = false;
+            }, 300);
+        }
+
+        function createUI() {
+            modes.forEach((mode, index) => {
+                const btn = document.createElement('button');
+                btn.className = `mode-btn ${index === 0 ? 'active' : ''}`;
+                btn.textContent = mode.name;
+                btn.addEventListener('click', () => switchMode(index));
+                uiPanel.appendChild(btn);
+            });
+            infoTitle.textContent = "Visualizer Mode 1";
+            infoDesc.textContent = modes[0].desc;
+        }
+
+        modes[0].init();
+        createUI();
+
+        function render() {
+            mouse.x += (mouse.targetX - mouse.x) * 0.15;
+            mouse.y += (mouse.targetY - mouse.y) * 0.15;
+
+            modes[activeMode.current].draw();
+            requestAnimationFrame(render);
+        }
+        render();
+    </script>
+</body>
+</html>
