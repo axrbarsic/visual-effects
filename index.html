@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual Effects Showcase</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  cursor: crosshair;
+  user-select: none;
+  height: 100vh;
+  width: 100vw;
+}
+canvas { position: fixed; top: 0; left: 0; z-index: 1; }
+.overlay {
+  position: fixed;
+  z-index: 10;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0 20px;
+}
+.btn {
+  padding: 12px 28px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  text-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+.btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.4);
+  box-shadow: 0 0 40px rgba(120, 80, 255, 0.3), 0 0 80px rgba(255, 70, 150, 0.15);
+  transform: translateY(-3px);
+}
+.btn.active {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 0 50px rgba(120, 80, 255, 0.5), 0 0 100px rgba(255, 70, 150, 0.25);
+}
+.title {
+  position: fixed;
+  z-index: 10;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(200,180,255,0.5);
+}
+.hint {
+  position: fixed;
+  z-index: 10;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="title">⚡ Visual Effects Lab</div>
+<div class="hint">move mouse · click · drag · scroll</div>
+<div class="overlay">
+  <button class="btn active" data-mode="0">✦ Particles</button>
+  <button class="btn" data-mode="1">◈ Vortex</button>
+  <button class="btn" data-mode="2">⬡ Hex Grid</button>
+  <button class="btn" data-mode="3">～ Waves</button>
+  <button class="btn" data-mode="4">◉ Neon Rings</button>
+</div>
+
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+
+let W, H, cx, cy;
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let mode = 0;
+let time = 0;
+let particles = [];
+let rings = [];
+let hexagons = [];
+
+function resize() {
+  W = c.width = window.innerWidth;
+  H = c.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+window.addEventListener('mousedown', () => mouseDown = true);
+window.addEventListener('mouseup', () => mouseDown = false);
+
+// === MODE 0: PARTICLE SYSTEM ===
+class Particle {
+  constructor(x, y) {
+    this.reset(x, y);
+  }
+  reset(x, y) {
+    this.x = x ?? Math.random() * W;
+    this.y = y ?? Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = (Math.random() - 0.5) * 2;
+    this.size = Math.random() * 3 + 1;
+    this.hue = Math.random() * 360;
+    this.life = 1;
+    this.decay = Math.random() * 0.005 + 0.002;
+    this.trail = [];
+    this.maxTrail = Math.floor(Math.random() * 8 + 4);
+  }
+  update() {
+    this.life -= this.decay;
+    this.trail.push({ x: this.x, y: this.y, life: this.life });
+    if (this.trail.length > this.maxTrail) this.trail.shift();
+
+    const dx = mouseX - this.x;
+    const dy = mouseY - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const force = mouseDown ? 0.04 : (dist < 200 ? dist < 50 ? -0.15 : 0.01 : 0);
+
+    this.vx += dx / (dist + 1) * force;
+    this.vy += dy / (dist + 1) * force;
+    this.vx *= 0.999;
+    this.vy *= 0.999;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H || this.life <= 0) {
+      this.reset();
+    }
+  }
+  draw(ctx) {
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * this.life * 0.5;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, this.size * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${this.hue + time * 20}, 80%, 60%, ${alpha})`;
+      ctx.fill();
+    }
+    // Main particle
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue + time * 20}, 90%, 65%, ${this.life})`;
+    ctx.fill();
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue + time * 20}, 70%, 55%, ${this.life * 0.15})`;
+    ctx.fill();
+  }
+}
+
+function initParticles(count) {
+  particles = [];
+  for (let i = 0; i < count; i++) particles.push(new Particle());
+}
+
+// === MODE 1: VORTEX ===
+function drawVortex() {
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  const numArms = 12;
+  const numPoints = 200;
+  const spin = time * 0.3;
+  const attractX = mouseDown ? mouseX : cx + Math.sin(time * 0.4) * 150;
+  const attractY = mouseDown ? mouseY : cy + Math.cos(time * 0.6) * 150;
+
+  for (let arm = 0; arm < numArms; arm++) {
+    const baseAngle = (arm / numArms) * Math.PI * 2 + spin;
+    ctx.beginPath();
+
+    for (let i = 0; i < numPoints; i++) {
+      const t = i / numPoints;
+      const radius = t * Math.min(W, H) * 0.55;
+      const twist = t * 8 + time * 2;
+      const angle = baseAngle + twist;
+
+      let x = attractX + Math.cos(angle) * radius;
+      let y = attractY + Math.sin(angle) * radius * 0.6;
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    const hue = (arm / numArms) * 360 + time * 40;
+    ctx.strokeStyle = `hsla(${hue % 360}, 80%, 55%, 0.7)`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = `hsla(${hue % 360}, 80%, 55%, 0.6)`;
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+}
+
+// === MODE 2: HEX GRID ===
+function drawHexGrid() {
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+  ctx.fillRect(0, 0, W, H);
+
+  const size = 28 + Math.sin(time * 0.5) * 5;
+  const w = size * 2;
+  const h = Math.sqrt(3) * size;
+  const cols = Math.ceil(W / (w * 0.75)) + 2;
+  const rows = Math.ceil(H / h) + 2;
+
+  for (let row = -1; row < rows; row++) {
+    for (let col = -1; col < cols; col++) {
+      const x = col * w * 0.75;
+      const y = row * h + (col % 2) * h / 2;
+
+      const dx = x - mouseX;
+      const dy = y - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const influence = Math.max(0, 1 - dist / 300);
+
+      const pulse = 1 + influence * 2;
+      const s = size * pulse;
+
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 3 * i - Math.PI / 6;
+        const px = x + s * Math.cos(angle);
+        const py = y + s * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+
+      const hue = (dist * 0.5 + time * 30) % 360;
+      const alpha = 0.15 + influence * 0.5;
+      ctx.strokeStyle = `hsla(${hue}, 70%, 55%, ${alpha})`;
+      ctx.lineWidth = 1 + influence;
+      ctx.stroke();
+
+      if (influence > 0.3) {
+        ctx.fillStyle = `hsla(${hue}, 60%, 50%, ${influence * 0.15})`;
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// === MODE 3: WAVES ===
+function drawWaves() {
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  const waveCount = 8;
+  for (let w = 0; w < waveCount; w++) {
+    const offset = w * 0.5;
+    ctx.beginPath();
+
+    for (let x = 0; x < W; x += 2) {
+      const nx = x / W;
+      const distToMouse = Math.abs(x - mouseX) / W;
+      const mouseInfluence = Math.exp(-distToMouse * 5);
+
+      const y1 = cy + Math.sin(nx * 8 + time * 2 + offset) * (40 + w * 12) * (1 + mouseInfluence * 2);
+      const y2 = cy + Math.cos(nx * 6 - time * 1.5 + offset) * (30 + w * 10) * (1 + mouseInfluence * 1.5);
+
+      const y = (y1 + y2) / 2 + Math.sin(nx * 14 + time * 3) * 15 * mouseInfluence;
+
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    const hue = (w / waveCount) * 360 + time * 50;
+    ctx.strokeStyle = `hsla(${hue % 360}, 80%, 60%, 0.6)`;
+    ctx.lineWidth = 1.5 + (w / waveCount) * 2;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = `hsla(${hue % 360}, 80%, 60%, 0.5)`;
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+}
+
+// === MODE 4: NEON RINGS ===
+function initRings() {
+  rings = [];
+  for (let i = 0; i < 15; i++) {
+    rings.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      radius: Math.random() * 30 + 10,
+      maxRadius: Math.random() * 100 + 60,
+      speed: Math.random() * 1.5 + 0.3,
+      hue: Math.random() * 360,
+      phase: Math.random() * Math.PI * 2,
+      angle: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+function drawNeonRings() {
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+  ctx.fillRect(0, 0, W, H);
+
+  for (const ring of rings) {
+    ring.radius += ring.speed * (1 + (mouseDown ? 2 : 0));
+    if (ring.radius > ring.maxRadius) {
+      ring.radius = 10;
+      ring.x = mouseX || Math.random() * W;
+      ring.y = mouseY || Math.random() * H;
+      ring.hue = Math.random() * 360;
+    }
+
+    const wobble = Math.sin(time * 3 + ring.phase) * 15;
+    const r = ring.radius + wobble;
+
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, r, 0, Math.PI * 2);
+
+    const alpha = 1 - ring.radius / ring.maxRadius;
+    const gradient = ctx.createRadialGradient(ring.x, ring.y, r * 0.85, ring.x, ring.y, r);
+    gradient.addColorStop(0, `hsla(${ring.hue}, 80%, 55%, 0)`);
+    gradient.addColorStop(0.5, `hsla(${ring.hue}, 80%, 55%, ${alpha * 0.7})`);
+    gradient.addColorStop(1, `hsla(${ring.hue}, 80%, 55%, 0)`);
+
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 2 + alpha * 4;
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = `hsla(${ring.hue}, 80%, 55%, ${alpha * 0.8})`;
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+}
+
+// Click to spawn burst
+window.addEventListener('click', e => {
+  if (mode === 0) {
+    for (let i = 0; i < 30; i++) {
+      const p = new Particle(e.clientX, e.clientY);
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 2;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.hue = Math.random() * 360;
+      p.size = Math.random() * 4 + 2;
+      particles.push(p);
+    }
+  }
+  if (mode === 4) {
+    for (let i = 0; i < 5; i++) {
+      rings.push({
+        x: e.clientX + (Math.random() - 0.5) * 80,
+        y: e.clientY + (Math.random() - 0.5) * 80,
+        radius: Math.random() * 20 + 5,
+        maxRadius: Math.random() * 150 + 80,
+        speed: Math.random() * 2 + 0.5,
+        hue: Math.random() * 360,
+        phase: Math.random() * Math.PI * 2,
+        angle: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+});
+
+// Buttons
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = parseInt(btn.dataset.mode);
+    if (mode === 0) initParticles(200);
+    if (mode === 4) initRings();
+  });
+});
+
+// Init
+initParticles(200);
+initRings();
+
+function draw() {
+  time += 0.016;
+
+  switch (mode) {
+    case 0:
+      ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw connections between close particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.update();
+        p.draw(ctx);
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const q = particles[j];
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100) {
+            const alpha = (1 - dist / 100) * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `hsla(${(p.hue + q.hue) / 2}, 60%, 50%, ${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      break;
+
+    case 1: drawVortex(); break;
+    case 2: drawHexGrid(); break;
+    case 3: drawWaves(); break;
+    case 4: drawNeonRings(); break;
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+// Handle window resize properly
+window.addEventListener('resize', () => {
+  resize();
+  if (mode === 0) initParticles(200);
+  if (mode === 4) initRings();
+});
+</script>
+</body>
+</html>
