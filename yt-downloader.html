@@ -497,19 +497,19 @@
 
       <!-- Video Quality Options -->
       <div class="options-grid" id="video-options">
-        <div class="option-pill active" data-quality="1080" onclick="selectQuality(this)">
+        <div class="option-pill active" data-quality="1080p" onclick="selectQuality(this)">
           <span>1080p</span>
           <span class="option-subtext">Full HD</span>
         </div>
-        <div class="option-pill" data-quality="720" onclick="selectQuality(this)">
+        <div class="option-pill" data-quality="720p" onclick="selectQuality(this)">
           <span>720p</span>
           <span class="option-subtext">HD</span>
         </div>
-        <div class="option-pill" data-quality="480" onclick="selectQuality(this)">
+        <div class="option-pill" data-quality="480p" onclick="selectQuality(this)">
           <span>480p</span>
           <span class="option-subtext">SD</span>
         </div>
-        <div class="option-pill" data-quality="360" onclick="selectQuality(this)">
+        <div class="option-pill" data-quality="360p" onclick="selectQuality(this)">
           <span>360p</span>
           <span class="option-subtext">Mobile</span>
         </div>
@@ -556,7 +556,7 @@
     // State variables
     let currentVideoUrl = '';
     let selectedMode = 'video'; // 'video' or 'audio'
-    let selectedQualityValue = '1080';
+    let selectedQualityValue = '1080p';
     let selectedAudioFormatValue = 'mp3';
 
     // List of public Cobalt API instances for automatic failover
@@ -719,8 +719,8 @@
         url: currentVideoUrl,
         videoQuality: selectedQualityValue,
         audioFormat: selectedAudioFormatValue,
-        downloadMode: selectedMode,
-        filenamePattern: "pretty"
+        downloadMode: 'auto',
+        filenameStyle: 'pretty'
       };
 
       // Try each path variant for this instance
