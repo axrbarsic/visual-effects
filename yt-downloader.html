@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>StreamVault - YouTube Downloader</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #151d30;
+      --card-border: #222f4c;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --error: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Background decorative glows */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
+      top: -50px;
+      left: -50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(0,0,0,0) 70%);
+      bottom: 50px;
+      right: -50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      z-index: 1;
+    }
+
+    header {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary), #a855f7);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 60%, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .input-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background-color: rgba(11, 15, 25, 0.6);
+      border: 1.5px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 14px 14px 44px;
+      color: var(--text-main);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+      background-color: rgba(11, 15, 25, 0.8);
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 12px;
+      height: 48px;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #4f46e5);
+      color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+    }
+
+    .btn-secondary {
+      background-color: rgba(255, 255, 255, 0.07);
+      color: var(--text-main);
+      padding: 0 16px;
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Result Card Styling */
+    .result-card {
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .result-card.show {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .video-preview {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .thumbnail-container {
+      position: relative;
+      width: 120px;
+      aspect-ratio: 16/9;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+    .thumbnail {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .video-author {
+      font-size: 13px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Tabs for Format Selection */
+    .tab-container {
+      display: flex;
+      background-color: rgba(11, 15, 25, 0.6);
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid var(--card-border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      height: 38px;
+      background: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 7px;
+    }
+
+    .tab-btn.active {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Options Grid */
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .option-pill {
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1.5px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .option-pill.active {
+      border-color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.08);
+      color: white;
+    }
+
+    .option-subtext {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+
+    /* Loading and Progress States */
+    .loader-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 0;
+    }
+
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 3.5px solid rgba(255, 255, 255, 0.08);
+      border-top: 3.5px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loader-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Error Message */
+    .error-box {
+      display: none;
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: 13px;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.4;
+    }
+
+    .error-box.show {
+      display: flex;
+    }
+
+    .error-box svg {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      fill: var(--error);
+    }
+
+    /* Footer disclaimer */
+    footer {
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      line-height: 1.5;
+      padding: 20px 0 10px 0;
+    }
+
+    footer a {
+      color: rgba(255, 255, 255, 0.4);
+      text-decoration: none;
+    }
+
+    /* Utilities */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Success state animation */
+    @keyframes pulse-success {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .success-pulse {
+      animation: pulse-success 1.5s infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+          </svg>
+        </div>
+        <h1>StreamVault</h1>
+      </div>
+      <p class="subtitle">Fast, private, and unlimited media extractor</p>
+    </header>
+
+    <!-- Main Input Card -->
+    <div class="card">
+      <div class="input-group">
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+          </span>
+          <input type="text" id="url-input" placeholder="Paste YouTube link here..." autocomplete="off" spellcheck="false">
+        </div>
+        <div class="action-buttons">
+          <button class="btn-primary" id="fetch-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Analyze Link
+          </button>
+          <button class="btn-secondary" id="paste-btn" title="Paste from clipboard">
+            Paste
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div class="error-box" id="error-display">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+      <span id="error-message">An error occurred. Please try again.</span>
+    </div>
+
+    <!-- Loader -->
+    <div class="loader-container" id="loading-state">
+      <div class="loader"></div>
+      <p class="loader-text" id="loader-status">Fetching video metadata...</p>
+    </div>
+
+    <!-- Result / Download Card -->
+    <div class="card result-card" id="result-container">
+      <div class="video-preview">
+        <div class="thumbnail-container">
+          <img src="" alt="Thumbnail" class="thumbnail" id="video-thumb">
+        </div>
+        <div class="video-info">
+          <div class="video-title" id="video-title">Video Title Loading...</div>
+          <div class="video-author" id="video-author">Channel</div>
+        </div>
+      </div>
+
+      <!-- Format Mode Selection Tabs -->
+      <div class="tab-container">
+        <button class="tab-btn active" id="tab-video" onclick="switchFormatMode('video')">Video</button>
+        <button class="tab-btn" id="tab-audio" onclick="switchFormatMode('audio')">Audio Only</button>
+      </div>
+
+      <!-- Video Quality Options -->
+      <div class="options-grid" id="video-options">
+        <div class="option-pill active" data-quality="1080" onclick="selectQuality(this)">
+          <span>1080p</span>
+          <span class="option-subtext">Full HD</span>
+        </div>
+        <div class="option-pill" data-quality="720" onclick="selectQuality(this)">
+          <span>720p</span>
+          <span class="option-subtext">HD</span>
+        </div>
+        <div class="option-pill" data-quality="480" onclick="selectQuality(this)">
+          <span>480p</span>
+          <span class="option-subtext">SD</span>
+        </div>
+        <div class="option-pill" data-quality="360" onclick="selectQuality(this)">
+          <span>360p</span>
+          <span class="option-subtext">Mobile</span>
+        </div>
+      </div>
+
+      <!-- Audio Quality Options (Hidden by default) -->
+      <div class="options-grid hidden" id="audio-options">
+        <div class="option-pill active" data-audio-fmt="mp3" onclick="selectAudioFormat(this)">
+          <span>MP3</span>
+          <span class="option-subtext">High Quality (320kbps)</span>
+        </div>
+        <div class="option-pill" data-audio-fmt="ogg" onclick="selectAudioFormat(this)">
+          <span>OGG</span>
+          <span class="option-subtext">Vorbis Audio</span>
+        </div>
+        <div class="option-pill" data-audio-fmt="wav" onclick="selectAudioFormat(this)">
+          <span>WAV</span>
+          <span class="option-subtext">Lossless Audio</span>
+        </div>
+        <div class="option-pill" data-audio-fmt="opus" onclick="selectAudioFormat(this)">
+          <span>OPUS</span>
+          <span class="option-subtext">Ultra Compressed</span>
+        </div>
+      </div>
+
+      <!-- Download Button -->
+      <button class="btn-primary" id="download-btn" style="height: 52px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Generate Download Link
+      </button>
+    </div>
+
+    <footer>
+      <p>For educational and personal use only.</p>
+      <p>Please respect content creators and copyright laws.</p>
+    </footer>
+  </div>
+
+  <script>
+    // State variables
+    let currentVideoUrl = '';
+    let selectedMode = 'video'; // 'video' or 'audio'
+    let selectedQualityValue = '1080';
+    let selectedAudioFormatValue = 'mp3';
+
+    // List of public Cobalt API instances for automatic failover
+    const cobaltInstances = [
+      'https://api.cobalt.tools/api/json',
+      'https://cobalt.api.ryb.me/api/json',
+      'https://co.wuk.sh/api/json'
+    ];
+    let currentInstanceIndex = 0;
+
+    // Elements
+    const urlInput = document.getElementById('url-input');
+    const fetchBtn = document.getElementById('fetch-btn');
+    const pasteBtn = document.getElementById('paste-btn');
+    const errorDisplay = document.getElementById('error-display');
+    const errorMessage = document.getElementById('error-message');
+    const loadingState = document.getElementById('loading-state');
+    const loaderStatus = document.getElementById('loader-status');
+    const resultContainer = document.getElementById('result-container');
+    const videoThumb = document.getElementById('video-thumb');
+    const videoTitle = document.getElementById('video-title');
+    const videoAuthor = document.getElementById('video-author');
+    const downloadBtn = document.getElementById('download-btn');
+    const videoOptions = document.getElementById('video-options');
+    const audioOptions = document.getElementById('audio-options');
+
+    // YouTube regex helper
+    function extractVideoId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    // Paste handler
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        urlInput.value = text;
+        showError(false);
+      } catch (err) {
+        // Fail gracefully if clipboard access is denied
+        alert('Please paste the URL manually using your device keyboard.');
+      }
+    });
+
+    // Error helper
+    function showError(show, text = '') {
+      if (show) {
+        errorMessage.textContent = text;
+        errorDisplay.classList.add('show');
+        resultContainer.classList.remove('show');
+        loadingState.style.display = 'none';
+      } else {
+        errorDisplay.classList.remove('show');
+      }
+    }
+
+    // Format selection switching
+    function switchFormatMode(mode) {
+      selectedMode = mode;
+      document.getElementById('tab-video').classList.toggle('active', mode === 'video');
+      document.getElementById('tab-audio').classList.toggle('active', mode === 'audio');
+      
+      if (mode === 'video') {
+        videoOptions.classList.remove('hidden');
+        audioOptions.classList.add('hidden');
+      } else {
+        videoOptions.classList.add('hidden');
+        audioOptions.classList.remove('hidden');
+      }
+    }
+
+    function selectQuality(element) {
+      document.querySelectorAll('#video-options .option-pill').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      selectedQualityValue = element.getAttribute('data-quality');
+    }
+
+    function selectAudioFormat(element) {
+      document.querySelectorAll('#audio-options .option-pill').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      selectedAudioFormatValue = element.getAttribute('data-audio-fmt');
+    }
+
+    // Step 1: Analyze URL and fetch basic details via oEmbed (CORS-friendly)
+    fetchBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        showError(true, 'Please paste a valid YouTube URL first.');
+        return;
+      }
+
+      const videoId = extractVideoId(url);
+      if (!videoId) {
+        showError(true, 'Invalid YouTube link. Please check the URL and try again.');
+        return;
+      }
+
+      currentVideoUrl = url;
+      showError(false);
+      resultContainer.classList.remove('show');
+      loadingState.style.display = 'flex';
+      loaderStatus.textContent = 'Analyzing video link...';
+
+      try {
+        // Use noembed.com (CORS-friendly YouTube oEmbed proxy) to fetch metadata
+        const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+        if (!response.ok) throw new Error('Failed to get video info.');
+        
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        // Populate card UI
+        videoTitle.textContent = data.title || 'YouTube Video';
+        videoAuthor.textContent = data.author_name || 'Channel Unknown';
+        
+        // High quality thumbnail fallback
+        videoThumb.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        
+        // Transition UI
+        loadingState.style.display = 'none';
+        resultContainer.classList.add('show');
+      } catch (err) {
+        // Fallback UI in case metadata scraper fails, but download might still work
+        videoTitle.textContent = 'Ready to Download';
+        videoAuthor.textContent = 'YouTube Media Stream';
+        videoThumb.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        
+        loadingState.style.display = 'none';
+        resultContainer.classList.add('show');
+      }
+    });
+
+    // Step 2: Request Download Link from Cobalt API with automatic fallback
+    downloadBtn.addEventListener('click', async () => {
+      setDownloadState(true);
+      currentInstanceIndex = 0; // Reset index to primary on new attempt
+      
+      const success = await attemptDownload();
+      if (!success) {
+        showError(true, 'All backend nodes are currently busy. Please try again in a few moments.');
+        setDownloadState(false);
+      }
+    });
+
+    async function attemptDownload() {
+      if (currentInstanceIndex >= cobaltInstances.length) {
+        return false;
+      }
+
+      const currentInstance = cobaltInstances[currentInstanceIndex];
+      loaderStatus.textContent = `Connecting to server node (${currentInstanceIndex + 1}/${cobaltInstances.length})...`;
+
+      const payload = {
+        url: currentVideoUrl,
+        videoQuality: selectedQualityValue,
+        audioFormat: selectedAudioFormatValue,
+        downloadMode: selectedMode, // "video" or "audio"
+        filenamePattern: "pretty"
+      };
+
+      try {
+        const response = await fetch(currentInstance, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.url) {
+          // Success! Trigger browser download
+          triggerDownload(data.url);
+          setDownloadState(false);
+          return true;
+        } else {
+          console.warn(`Node ${currentInstanceIndex} failed:`, data.text || 'Unknown API issue');
+          // Try next instance
+          currentInstanceIndex++;
+          return await attemptDownload();
+        }
+      } catch (error) {
+        console.warn(`Network error on node ${currentInstanceIndex}:`, error);
+        // Try next instance
+        currentInstanceIndex++;
+        return await attemptDownload();
+      }
+    }
+
+    function setDownloadState(isLoading) {
+      if (isLoading) {
+        downloadBtn.disabled = true;
+        downloadBtn.style.opacity = '0.6';
+        downloadBtn.innerHTML = `
+          <div class="loader" style="width: 18px; height: 18px; border-width: 2px;"></div>
+          Processing File...
+        `;
+        loadingState.style.display = 'flex';
+        loaderStatus.textContent = 'Generating your high-speed download link...';
+        resultContainer.style.opacity = '0.7';
+        resultContainer.style.pointerEvents = 'none';
+      } else {
+        downloadBtn.disabled = false;
+        downloadBtn.style.opacity = '1';
+        downloadBtn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Download Media
+        `;
+        loadingState.style.display = 'none';
+        resultContainer.style.opacity = '1';
+        resultContainer.style.pointerEvents = 'auto';
+      }
+    }
+
+    function triggerDownload(url) {
+      // Create a temporary anchor element to trigger download
+      const tempAnchor = document.createElement('a');
+      tempAnchor.href = url;
+      tempAnchor.target = '_blank'; // Opens in new tab if browser blocks direct download
+      tempAnchor.setAttribute('download', '');
+      document.body.appendChild(tempAnchor);
+      tempAnchor.click();
+      document.body.removeChild(tempAnchor);
+    }
+  </script>
+</body>
+</html>
