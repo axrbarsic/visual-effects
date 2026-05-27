@@ -1,798 +1,555 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>StreamVault - YouTube Downloader</title>
-  <style>
-    :root {
-      --bg-color: #0b0f19;
-      --card-bg: #151d30;
-      --card-border: #222f4c;
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --accent: #10b981;
-      --accent-hover: #059669;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --error: #ef4444;
-      --success: #10b981;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen Media Downloader</title>
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at top, #1a102f 0%, #050508 100%);
+            --card-bg: rgba(20, 20, 35, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #ff2a5f;
+            --accent-secondary: #7000ff;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --input-bg: rgba(10, 10, 18, 0.6);
+            --success: #10b981;
+            --error: #ef4444;
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px 16px;
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
-      overflow-x: hidden;
-      position: relative;
-    }
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+        }
 
-    /* Background decorative glows */
-    body::before {
-      content: '';
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
-      top: -50px;
-      left: -50px;
-      z-index: -1;
-      pointer-events: none;
-    }
+        .container {
+            width: 100%;
+            max-width: 540px;
+            z-index: 10;
+        }
 
-    body::after {
-      content: '';
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(0,0,0,0) 70%);
-      bottom: 50px;
-      right: -50px;
-      z-index: -1;
-      pointer-events: none;
-    }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 28px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
 
-    .container {
-      width: 100%;
-      max-width: 540px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      z-index: 1;
-    }
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
 
-    header {
-      text-align: center;
-      margin-top: 10px;
-    }
+        .logo-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 20px rgba(255, 42, 95, 0.3);
+        }
 
-    .logo-container {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
+        .logo-container svg {
+            width: 32px;
+            height: 32px;
+            fill: #fff;
+        }
 
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--primary), #a855f7);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    }
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
 
-    .logo-icon svg {
-      width: 20px;
-      height: 20px;
-      fill: white;
-    }
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
 
-    h1 {
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #ffffff 60%, #a855f7);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
 
-    .subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
+        .url-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1.5px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px 110px 16px 18px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.25s ease;
+        }
 
-    .card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+        .url-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(255, 42, 95, 0.15);
+        }
 
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+        .paste-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-    .input-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
+        .paste-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
 
-    .input-icon {
-      position: absolute;
-      left: 14px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      pointer-events: none;
-    }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
 
-    .input-icon svg {
-      width: 20px;
-      height: 20px;
-    }
+        .select-wrapper {
+            position: relative;
+        }
 
-    input[type="text"] {
-      width: 100%;
-      background-color: rgba(11, 15, 25, 0.6);
-      border: 1.5px solid var(--card-border);
-      border-radius: 12px;
-      padding: 14px 14px 14px 44px;
-      color: var(--text-main);
-      font-size: 15px;
-      outline: none;
-      transition: all 0.2s ease;
-    }
+        .select-wrapper select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1.5px solid var(--card-border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+        }
 
-    input[type="text"]:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-      background-color: rgba(11, 15, 25, 0.8);
-    }
+        .select-wrapper::after {
+            content: '▼';
+            font-size: 10px;
+            color: var(--text-muted);
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
 
-    .action-buttons {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-    }
+        /* Preview Area */
+        .preview-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
 
-    button {
-      border: none;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 12px;
-      height: 48px;
-    }
+        .preview-thumb {
+            width: 120px;
+            height: 68px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #111;
+        }
 
-    button:active {
-      transform: scale(0.97);
-    }
+        .preview-info {
+            flex: 1;
+            min-width: 0;
+        }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), #4f46e5);
-      color: white;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-    }
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
 
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #4f46e5, #4338ca);
-    }
+        .preview-author {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
 
-    .btn-secondary {
-      background-color: rgba(255, 255, 255, 0.07);
-      color: var(--text-main);
-      padding: 0 16px;
-    }
+        /* Action Button */
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(112, 0, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
 
-    .btn-secondary:hover {
-      background-color: rgba(255, 255, 255, 0.12);
-    }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(112, 0, 255, 0.45);
+        }
 
-    /* Result Card Styling */
-    .result-card {
-      display: none;
-      flex-direction: column;
-      gap: 18px;
-      opacity: 0;
-      transform: translateY(15px);
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+        .action-btn:active {
+            transform: translateY(1px);
+        }
 
-    .result-card.show {
-      display: flex;
-      opacity: 1;
-      transform: translateY(0);
-    }
+        .action-btn:disabled {
+            background: #2a2a35;
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-    .video-preview {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
+        /* States & Feedback */
+        .status-box {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+            animation: slideUp 0.25s ease;
+        }
 
-    .thumbnail-container {
-      position: relative;
-      width: 120px;
-      aspect-ratio: 16/9;
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: #000;
-      flex-shrink: 0;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-    }
+        .status-box.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            display: block;
+        }
 
-    .thumbnail {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+        .status-box.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            display: block;
+        }
 
-    .video-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      overflow: hidden;
-    }
+        .status-box.loading {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            display: block;
+        }
 
-    .video-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-main);
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
+        /* Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
 
-    .video-author {
-      font-size: 13px;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+        /* Disclaimer */
+        .disclaimer {
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 24px;
+            line-height: 1.5;
+        }
 
-    /* Tabs for Format Selection */
-    .tab-container {
-      display: flex;
-      background-color: rgba(11, 15, 25, 0.6);
-      border-radius: 10px;
-      padding: 4px;
-      border: 1px solid var(--card-border);
-    }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-    .tab-btn {
-      flex: 1;
-      height: 38px;
-      background: none;
-      color: var(--text-muted);
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 7px;
-    }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
 
-    .tab-btn.active {
-      background-color: var(--card-bg);
-      color: var(--text-main);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    /* Options Grid */
-    .options-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .option-pill {
-      background-color: rgba(255, 255, 255, 0.03);
-      border: 1.5px solid var(--card-border);
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      transition: all 0.2s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .option-pill.active {
-      border-color: var(--primary);
-      background-color: rgba(99, 102, 241, 0.08);
-      color: white;
-    }
-
-    .option-subtext {
-      font-size: 10px;
-      color: var(--text-muted);
-      font-weight: normal;
-    }
-
-    /* Loading and Progress States */
-    .loader-container {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      padding: 20px 0;
-    }
-
-    .loader {
-      width: 40px;
-      height: 40px;
-      border: 3.5px solid rgba(255, 255, 255, 0.08);
-      border-top: 3.5px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .loader-text {
-      font-size: 14px;
-      color: var(--text-muted);
-      text-align: center;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Error Message */
-    .error-box {
-      display: none;
-      background-color: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 12px;
-      padding: 12px 16px;
-      color: #fca5a5;
-      font-size: 13px;
-      align-items: center;
-      gap: 10px;
-      line-height: 1.4;
-    }
-
-    .error-box.show {
-      display: flex;
-    }
-
-    .error-box svg {
-      flex-shrink: 0;
-      width: 18px;
-      height: 18px;
-      fill: var(--error);
-    }
-
-    /* Footer disclaimer */
-    footer {
-      text-align: center;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.25);
-      line-height: 1.5;
-      padding: 20px 0 10px 0;
-    }
-
-    footer a {
-      color: rgba(255, 255, 255, 0.4);
-      text-decoration: none;
-    }
-
-    /* Utilities */
-    .hidden {
-      display: none !important;
-    }
-
-    /* Success state animation */
-    @keyframes pulse-success {
-      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    .success-pulse {
-      animation: pulse-success 1.5s infinite;
-    }
-  </style>
+        /* Utility classes */
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <header>
-      <div class="logo-container">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
-          </svg>
-        </div>
-        <h1>StreamVault</h1>
-      </div>
-      <p class="subtitle">Fast, private, and unlimited media extractor</p>
-    </header>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="logo-container">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+                    </svg>
+                </div>
+                <h1>Media Downloader</h1>
+                <p class="subtitle">Download your favorite YouTube videos instantly</p>
+            </div>
 
-    <!-- Main Input Card -->
-    <div class="card">
-      <div class="input-group">
-        <div class="input-wrapper">
-          <span class="input-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-          </span>
-          <input type="text" id="url-input" placeholder="Paste YouTube link here..." autocomplete="off" spellcheck="false">
+            <!-- Input area -->
+            <div class="input-group">
+                <input type="text" id="url-input" class="url-input" placeholder="Paste YouTube link here..." autocomplete="off" spellcheck="false">
+                <button type="button" id="paste-btn" class="paste-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    Paste
+                </button>
+            </div>
+
+            <!-- Configuration Options -->
+            <div class="options-grid">
+                <div class="select-wrapper">
+                    <select id="download-mode">
+                        <option value="video">Video (MP4)</option>
+                        <option value="audio">Audio (MP3)</option>
+                    </select>
+                </div>
+                <div class="select-wrapper">
+                    <select id="quality-select">
+                        <option value="1080">1080p (Full HD)</option>
+                        <option value="720" selected>720p (HD)</option>
+                        <option value="480">480p (SD)</option>
+                        <option value="360">360p</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Dynamic Metadata Preview -->
+            <div id="preview-container" class="preview-box hidden">
+                <img id="preview-image" class="preview-thumb" src="" alt="Thumbnail">
+                <div class="preview-info">
+                    <div id="preview-title" class="preview-title">Loading video details...</div>
+                    <div id="preview-author" class="preview-author">YouTube Video</div>
+                </div>
+            </div>
+
+            <!-- Action Trigger -->
+            <button id="download-btn" class="action-btn">
+                <span>Generate Download Link</span>
+            </button>
+
+            <!-- Status Alerts -->
+            <div id="status-message" class="status-box"></div>
         </div>
-        <div class="action-buttons">
-          <button class="btn-primary" id="fetch-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            Analyze Link
-          </button>
-          <button class="btn-secondary" id="paste-btn" title="Paste from clipboard">
-            Paste
-          </button>
+
+        <div class="disclaimer">
+            This tool is for educational and personal use only. Please respect creators' copyright. Powered by Cobalt API.
         </div>
-      </div>
     </div>
 
-    <!-- Error Display -->
-    <div class="error-box" id="error-display">
-      <svg viewBox="0 0 24 24">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-      </svg>
-      <span id="error-message">An error occurred. Please try again.</span>
-    </div>
+    <script>
+        const urlInput = document.getElementById('url-input');
+        const pasteBtn = document.getElementById('paste-btn');
+        const downloadMode = document.getElementById('download-mode');
+        const qualitySelect = document.getElementById('quality-select');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImage = document.getElementById('preview-image');
+        const previewTitle = document.getElementById('preview-title');
+        const previewAuthor = document.getElementById('preview-author');
+        const downloadBtn = document.getElementById('download-btn');
+        const statusMessage = document.getElementById('status-message');
 
-    <!-- Loader -->
-    <div class="loader-container" id="loading-state">
-      <div class="loader"></div>
-      <p class="loader-text" id="loader-status">Fetching video metadata...</p>
-    </div>
+        // Cobalt endpoints and fallback lists
+        const COBALT_INSTANCES = [
+            'https://api.cobalt.tools/api/json',
+            'https://cobalt.api.ryb.sh/api/json',
+            'https://co.wuk.sh/api/json'
+        ];
 
-    <!-- Result / Download Card -->
-    <div class="card result-card" id="result-container">
-      <div class="video-preview">
-        <div class="thumbnail-container">
-          <img src="" alt="Thumbnail" class="thumbnail" id="video-thumb">
-        </div>
-        <div class="video-info">
-          <div class="video-title" id="video-title">Video Title Loading...</div>
-          <div class="video-author" id="video-author">Channel</div>
-        </div>
-      </div>
+        // Toggle Quality dropdown based on download mode
+        downloadMode.addEventListener('change', () => {
+            if (downloadMode.value === 'audio') {
+                qualitySelect.disabled = true;
+                qualitySelect.parentElement.style.opacity = '0.5';
+            } else {
+                qualitySelect.disabled = false;
+                qualitySelect.parentElement.style.opacity = '1';
+            }
+        });
 
-      <!-- Format Mode Selection Tabs -->
-      <div class="tab-container">
-        <button class="tab-btn active" id="tab-video" onclick="switchFormatMode('video')">Video</button>
-        <button class="tab-btn" id="tab-audio" onclick="switchFormatMode('audio')">Audio Only</button>
-      </div>
+        // Paste functionality
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                urlInput.value = text;
+                handleUrlChange();
+            } catch (err) {
+                showStatus('Could not access clipboard. Please paste manually.', 'error');
+            }
+        });
 
-      <!-- Video Quality Options -->
-      <div class="options-grid" id="video-options">
-        <div class="option-pill active" data-quality="1080p" onclick="selectQuality(this)">
-          <span>1080p</span>
-          <span class="option-subtext">Full HD</span>
-        </div>
-        <div class="option-pill" data-quality="720p" onclick="selectQuality(this)">
-          <span>720p</span>
-          <span class="option-subtext">HD</span>
-        </div>
-        <div class="option-pill" data-quality="480p" onclick="selectQuality(this)">
-          <span>480p</span>
-          <span class="option-subtext">SD</span>
-        </div>
-        <div class="option-pill" data-quality="360p" onclick="selectQuality(this)">
-          <span>360p</span>
-          <span class="option-subtext">Mobile</span>
-        </div>
-      </div>
+        // Auto-detect input changes
+        urlInput.addEventListener('input', handleUrlChange);
+        urlInput.addEventListener('change', handleUrlChange);
 
-      <!-- Audio Quality Options (Hidden by default) -->
-      <div class="options-grid hidden" id="audio-options">
-        <div class="option-pill active" data-audio-fmt="mp3" onclick="selectAudioFormat(this)">
-          <span>MP3</span>
-          <span class="option-subtext">High Quality (320kbps)</span>
-        </div>
-        <div class="option-pill" data-audio-fmt="ogg" onclick="selectAudioFormat(this)">
-          <span>OGG</span>
-          <span class="option-subtext">Vorbis Audio</span>
-        </div>
-        <div class="option-pill" data-audio-fmt="wav" onclick="selectAudioFormat(this)">
-          <span>WAV</span>
-          <span class="option-subtext">Lossless Audio</span>
-        </div>
-        <div class="option-pill" data-audio-fmt="opus" onclick="selectAudioFormat(this)">
-          <span>OPUS</span>
-          <span class="option-subtext">Ultra Compressed</span>
-        </div>
-      </div>
-
-      <!-- Download Button -->
-      <button class="btn-primary" id="download-btn" style="height: 52px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Generate Download Link
-      </button>
-    </div>
-
-    <footer>
-      <p>For educational and personal use only.</p>
-      <p>Please respect content creators and copyright laws.</p>
-    </footer>
-  </div>
-
-  <script>
-    // State variables
-    let currentVideoUrl = '';
-    let selectedMode = 'video'; // 'video' or 'audio'
-    let selectedQualityValue = '1080p';
-    let selectedAudioFormatValue = 'mp3';
-
-    // List of public Cobalt API instances for automatic failover
-    const cobaltInstances = [
-      'https://cobalt.aeong.one/',
-      'https://cobalt.datura.network/',
-      'https://co.wuk.sh/',
-      'https://api.cobalt.tools/',
-      'https://cobalt.api.ryb.me/',
-      'https://cobalt.7n.world/',
-    ];
-    // Some instances need /api/json path
-    const cobaltPaths = ['', '/api/json'];
-    let currentInstanceIndex = 0;
-
-    // Elements
-    const urlInput = document.getElementById('url-input');
-    const fetchBtn = document.getElementById('fetch-btn');
-    const pasteBtn = document.getElementById('paste-btn');
-    const errorDisplay = document.getElementById('error-display');
-    const errorMessage = document.getElementById('error-message');
-    const loadingState = document.getElementById('loading-state');
-    const loaderStatus = document.getElementById('loader-status');
-    const resultContainer = document.getElementById('result-container');
-    const videoThumb = document.getElementById('video-thumb');
-    const videoTitle = document.getElementById('video-title');
-    const videoAuthor = document.getElementById('video-author');
-    const downloadBtn = document.getElementById('download-btn');
-    const videoOptions = document.getElementById('video-options');
-    const audioOptions = document.getElementById('audio-options');
-
-    // YouTube regex helper
-    function extractVideoId(url) {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : null;
-    }
-
-    // Paste handler
-    pasteBtn.addEventListener('click', async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        urlInput.value = text;
-        showError(false);
-      } catch (err) {
-        // Fail gracefully if clipboard access is denied
-        alert('Please paste the URL manually using your device keyboard.');
-      }
-    });
-
-    // Error helper
-    function showError(show, text = '') {
-      if (show) {
-        errorMessage.textContent = text;
-        errorDisplay.classList.add('show');
-        resultContainer.classList.remove('show');
-        loadingState.style.display = 'none';
-      } else {
-        errorDisplay.classList.remove('show');
-      }
-    }
-
-    // Format selection switching
-    function switchFormatMode(mode) {
-      selectedMode = mode;
-      document.getElementById('tab-video').classList.toggle('active', mode === 'video');
-      document.getElementById('tab-audio').classList.toggle('active', mode === 'audio');
-      
-      if (mode === 'video') {
-        videoOptions.classList.remove('hidden');
-        audioOptions.classList.add('hidden');
-      } else {
-        videoOptions.classList.add('hidden');
-        audioOptions.classList.remove('hidden');
-      }
-    }
-
-    function selectQuality(element) {
-      document.querySelectorAll('#video-options .option-pill').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
-      selectedQualityValue = element.getAttribute('data-quality');
-    }
-
-    function selectAudioFormat(element) {
-      document.querySelectorAll('#audio-options .option-pill').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
-      selectedAudioFormatValue = element.getAttribute('data-audio-fmt');
-    }
-
-    // Step 1: Analyze URL and fetch basic details via oEmbed (CORS-friendly)
-    fetchBtn.addEventListener('click', async () => {
-      const url = urlInput.value.trim();
-      if (!url) {
-        showError(true, 'Please paste a valid YouTube URL first.');
-        return;
-      }
-
-      const videoId = extractVideoId(url);
-      if (!videoId) {
-        showError(true, 'Invalid YouTube link. Please check the URL and try again.');
-        return;
-      }
-
-      currentVideoUrl = url;
-      showError(false);
-      resultContainer.classList.remove('show');
-      loadingState.style.display = 'flex';
-      loaderStatus.textContent = 'Analyzing video link...';
-
-      try {
-        // Use noembed.com (CORS-friendly YouTube oEmbed proxy) to fetch metadata
-        const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
-        if (!response.ok) throw new Error('Failed to get video info.');
-        
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-
-        // Populate card UI
-        videoTitle.textContent = data.title || 'YouTube Video';
-        videoAuthor.textContent = data.author_name || 'Channel Unknown';
-        
-        // High quality thumbnail fallback
-        videoThumb.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-        
-        // Transition UI
-        loadingState.style.display = 'none';
-        resultContainer.classList.add('show');
-      } catch (err) {
-        // Fallback UI in case metadata scraper fails, but download might still work
-        videoTitle.textContent = 'Ready to Download';
-        videoAuthor.textContent = 'YouTube Media Stream';
-        videoThumb.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-        
-        loadingState.style.display = 'none';
-        resultContainer.classList.add('show');
-      }
-    });
-
-    // Step 2: Request Download Link from Cobalt API with automatic fallback
-    downloadBtn.addEventListener('click', async () => {
-      setDownloadState(true);
-      currentInstanceIndex = 0; // Reset index to primary on new attempt
-      
-      const success = await attemptDownload();
-      if (!success) {
-        showError(true, 'All backend nodes are currently busy. Please try again in a few moments.');
-        setDownloadState(false);
-      }
-    });
-
-    async function attemptDownload() {
-      if (currentInstanceIndex >= cobaltInstances.length) {
-        return false;
-      }
-
-      const currentInstance = cobaltInstances[currentInstanceIndex];
-      loaderStatus.textContent = `Connecting to server node (${currentInstanceIndex + 1}/${cobaltInstances.length})...`;
-
-      const payload = {
-        url: currentVideoUrl,
-        videoQuality: selectedQualityValue,
-        audioFormat: selectedAudioFormatValue,
-        downloadMode: 'auto',
-        filenameStyle: 'pretty'
-      };
-
-      // Try each path variant for this instance
-      for (const path of cobaltPaths) {
-        const apiUrl = currentInstance.replace(/\/$/, '') + path;
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-
-          const data = await response.json();
-
-          if (response.ok && data.url) {
-            triggerDownload(data.url);
-            setDownloadState(false);
-            return true;
-          }
-          console.warn(`Node ${currentInstanceIndex} path ${path}:`, data.text || 'No URL in response');
-        } catch (error) {
-          console.warn(`Network error on node ${currentInstanceIndex} path ${path}:`, error);
+        function getYouTubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
         }
-      }
 
-      // All paths failed, try next instance
-      currentInstanceIndex++;
-      return await attemptDownload();
-    }
+        async function handleUrlChange() {
+            const url = urlInput.value.trim();
+            const videoId = getYouTubeId(url);
 
-    function setDownloadState(isLoading) {
-      if (isLoading) {
-        downloadBtn.disabled = true;
-        downloadBtn.style.opacity = '0.6';
-        downloadBtn.innerHTML = `
-          <div class="loader" style="width: 18px; height: 18px; border-width: 2px;"></div>
-          Processing File...
-        `;
-        loadingState.style.display = 'flex';
-        loaderStatus.textContent = 'Generating your high-speed download link...';
-        resultContainer.style.opacity = '0.7';
-        resultContainer.style.pointerEvents = 'none';
-      } else {
-        downloadBtn.disabled = false;
-        downloadBtn.style.opacity = '1';
-        downloadBtn.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          Download Media
-        `;
-        loadingState.style.display = 'none';
-        resultContainer.style.opacity = '1';
-        resultContainer.style.pointerEvents = 'auto';
-      }
-    }
+            if (!videoId) {
+                previewContainer.classList.add('hidden');
+                return;
+            }
 
-    function triggerDownload(url) {
-      // Create a temporary anchor element to trigger download
-      const tempAnchor = document.createElement('a');
-      tempAnchor.href = url;
-      tempAnchor.target = '_blank'; // Opens in new tab if browser blocks direct download
-      tempAnchor.setAttribute('download', '');
-      document.body.appendChild(tempAnchor);
-      tempAnchor.click();
-      document.body.removeChild(tempAnchor);
-    }
-  </script>
+            // Instantly show default preview assets to remain highly responsive
+            previewImage.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+            previewTitle.textContent = "Fetching video title...";
+            previewAuthor.textContent = "YouTube Video";
+            previewContainer.classList.remove('hidden');
+
+            // Fetch actual metadata from YouTube oEmbed safely
+            try {
+                const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+                const response = await fetch(oEmbedUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    previewTitle.textContent = data.title;
+                    previewAuthor.textContent = data.author_name;
+                } else {
+                    previewTitle.textContent = "YouTube Video Ready";
+                }
+            } catch (e) {
+                previewTitle.textContent = "YouTube Video Ready";
+            }
+        }
+
+        // Main Download Handler
+        downloadBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) {
+                showStatus('Please enter a valid YouTube URL first.', 'error');
+                return;
+            }
+
+            setLoadingState(true);
+            showStatus('Contacting download server...', 'loading');
+
+            const mode = downloadMode.value;
+            const quality = qualitySelect.value;
+
+            // Prepare Cobalt payload
+            const payload = {
+                url: url,
+                filenameStyle: 'pretty'
+            };
+
+            if (mode === 'audio') {
+                payload.downloadMode = 'audio';
+                payload.audioFormat = 'mp3';
+            } else {
+                payload.downloadMode = 'video';
+                payload.videoQuality = quality;
+            }
+
+            let success = false;
+
+            // Attempt fetching from available instances sequentially
+            for (const instance of COBALT_INSTANCES) {
+                try {
+                    const response = await fetch(instance, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) continue;
+
+                    const data = await response.json();
+
+                    if (data.status === 'redirect' || data.status === 'tunnel' || data.status === 'stream') {
+                        showStatus('Download ready! Opening file link...', 'success');
+                        window.open(data.url, '_blank');
+                        success = true;
+                        break;
+                    } else if (data.status === 'error') {
+                        showStatus(`Server Message: ${data.text || 'Process failed'}`, 'error');
+                        setLoadingState(false);
+                        return;
+                    }
+                } catch (err) {
+                    console.warn(`Instance failed: ${instance}`, err);
+                }
+            }
+
+            if (!success) {
+                showStatus('Service temporarily busy. Please try again or try another format.', 'error');
+            }
+            setLoadingState(false);
+        });
+
+        function showStatus(message, type) {
+            statusMessage.className = `status-box ${type}`;
+            if (type === 'loading') {
+                statusMessage.innerHTML = `<span class="spinner" style="vertical-align: middle; margin-right: 8px;"></span> ${message}`;
+            } else {
+                statusMessage.textContent = message;
+            }
+        }
+
+        function setLoadingState(isLoading) {
+            downloadBtn.disabled = isLoading;
+            const btnText = downloadBtn.querySelector('span');
+            if (isLoading) {
+                btnText.textContent = 'Processing request...';
+            } else {
+                btnText.textContent = 'Generate Download Link';
+            }
+        }
+    </script>
 </body>
 </html>
